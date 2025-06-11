@@ -1,84 +1,92 @@
 <template>
-  <v-row>
-    <v-col cols="12" md="6">
-      <v-card>
-        <v-card-title>자원 사용량 보고서</v-card-title>
-        <v-card-text>
-          <div v-if="usageLoaded">
-            <BarChart
-              :labels="usageDates"
-              :data="usageDaily"
-              title="일별 GPU 사용량"
-            />
-            <BarChart
-              :labels="usageUsers"
-              :data="usageUser"
-              title="사용자별 누적 사용일"
-              color="#6c47ff"
-            />
-            <div class="mt-3 text-caption">
-              <strong>전체 GPU 사용일 합계:</strong> {{ usageTotal }}일
-            </div>
-          </div>
-          <div v-else>Loading...</div>
-        </v-card-text>
-      </v-card>
-    </v-col>
-    <v-col cols="12" md="6">
-      <v-card>
-        <v-card-title>유휴 시간 보고서</v-card-title>
-        <v-card-text>
-          <div v-if="idleLoaded">
-            <BarChart
-              :labels="idleLabels"
-              :data="idleValues"
-              title="GPU별 유휴 일수"
-              color="#43a047"
-            />
-            <ul class="mt-3 text-caption">
-              <li v-for="item in idleData" :key="item.gpu_id">
-                GPU {{ item.gpu_id }} ({{ item.user }}) - 유휴 {{ item.idle_days }}일
-              </li>
-            </ul>
-          </div>
-          <div v-else>Loading...</div>
-        </v-card-text>
-      </v-card>
-    </v-col>
-  </v-row>
+  <v-container>
+    <h2>보고서</h2>
+    <v-row class="mb-4">
+      <v-col cols="12" md="4">
+        <v-text-field v-model="startDate" label="시작일" type="date" :max="endDate"/>
+      </v-col>
+      <v-col cols="12" md="4">
+        <v-text-field v-model="endDate" label="종료일" type="date" :min="startDate"/>
+      </v-col>
+      <v-col cols="12" md="2">
+        <v-btn color="primary" class="mt-2" @click="fetchAllData">조회</v-btn>
+      </v-col>
+    </v-row>
+    <v-card class="pa-4 mb-4">
+      <h3>SYSTEM INFO</h3>
+      <div>총 유저: {{ sysinfo.user_count }}명</div>
+      <div>GPU: {{ sysinfo.gpu_total }}개 ({{ sysinfo.gpu_model }})</div>
+      <div>CPU: {{ sysinfo.cpu_total }}개 ({{ sysinfo.cpu_model }})</div>
+      <div>MEM: {{ sysinfo.mem_desc }}</div>
+    </v-card>
+    <v-row>
+      <v-col>
+        <LineChart :labels="dateLabels" :data="cpuUsage" title="CPU 전체 사용량"/>
+      </v-col>
+      <v-col>
+        <LineChart :labels="dateLabels" :data="memUsage" title="MEM 전체 사용량"/>
+      </v-col>
+    </v-row>
+    <v-card class="pa-4 my-4">
+      <LineChart :labels="dateLabels" :data="gpuUsage" title="GPU 전체 사용량"/>
+    </v-card>
+    <v-row>
+      <v-col>
+        <h4>사용자 GPU 누적 사용 랭크</h4>
+        <v-table>
+          <thead><tr><th>사용자</th><th>총 사용량</th><th>리포트</th></tr></thead>
+          <tbody>
+            <tr v-for="r in rankUsage" :key="r.user">
+              <td>{{ r.user }}</td>
+              <td>{{ r.usage }}</td>
+              <td><a :href="r.link" target="_blank">리포트</a></td>
+            </tr>
+          </tbody>
+        </v-table>
+      </v-col>
+      <v-col>
+        <h4>사용자 GPU 누적 유휴시간 랭크</h4>
+        <v-table>
+          <thead><tr><th>사용자</th><th>총 유휴시간</th><th>리포트</th></tr></thead>
+          <tbody>
+            <tr v-for="r in rankIdle" :key="r.user">
+              <td>{{ r.user }}</td>
+              <td>{{ r.idle }}</td>
+              <td><a :href="r.link" target="_blank">리포트</a></td>
+            </tr>
+          </tbody>
+        </v-table>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import axios from 'axios'
-import BarChart from '@/components/BarChart.vue'
+import LineChart from '@/components/LineChart.vue'
 
-const usageLoaded = ref(false)
-const idleLoaded = ref(false)
-const usageDates = ref([])
-const usageDaily = ref([])
-const usageUsers = ref([])
-const usageUser = ref([])
-const usageTotal = ref(0)
-const idleLabels = ref([])
-const idleValues = ref([])
-const idleData = ref([])
+const startDate = ref('2024-07-01')
+const endDate = ref('2024-07-31')
+const sysinfo = ref({})
+const dateLabels = ref([])
+const cpuUsage = ref([])
+const memUsage = ref([])
+const gpuUsage = ref([])
+const rankUsage = ref([])
+const rankIdle = ref([])
 
-onMounted(async () => {
-  // 사용량
-  const usage = (await axios.get('http://127.0.0.1:5000/api/reports/usage')).data
-  usageDates.value = usage.dates
-  usageDaily.value = usage.daily_usage
-  usageUsers.value = usage.users
-  usageUser.value = usage.user_usage
-  usageTotal.value = usage.total_usage
-  usageLoaded.value = true
-
-  // 유휴시간
-  const idle = (await axios.get('http://127.0.0.1:5000/api/reports/idle')).data
-  idleLabels.value = idle.map(i => `GPU${i.gpu_id}`)
-  idleValues.value = idle.map(i => i.idle_days)
-  idleData.value = idle
-  idleLoaded.value = true
-})
+async function fetchAllData() {
+  sysinfo.value = (await axios.get('/api/sysinfo')).data
+  const usage = (await axios.get('/api/reports/period', {
+    params: { start: startDate.value, end: endDate.value }
+  })).data
+  dateLabels.value = usage.dates
+  cpuUsage.value = usage.cpu_total
+  memUsage.value = usage.mem_total
+  gpuUsage.value = usage.gpu_total
+  rankUsage.value = usage.rank_usage
+  rankIdle.value = usage.rank_idle
+}
+fetchAllData()
 </script>

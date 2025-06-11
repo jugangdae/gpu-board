@@ -1,45 +1,154 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from datetime import datetime
+from datetime import datetime, timedelta
+import random
 
 app = Flask(__name__)
 CORS(app)
 
-# 더미 유저
+# -- 더미 유저/자원
 users = [
-    "홍길동", "김철수", "이영희", "박민수", "최수연"
+    '홍길동', '김철수', '김동현', '김서권', '윤다빈',
+    '박지훈', '최예린', '이민호', '한지수', '조윤호',
+    '정소연', '오세훈', '서지수', '배상우', '노지윤'
 ]
+gpus = [{"res_id": i, "type": "GPU", "model": f"RTX 4090 {i+1}", "name": f"GPU-{i+1}"} for i in range(20)]
+cpus = [{"res_id": i, "type": "CPU", "model": f"Xeon Gold 6{str(i).zfill(2)}", "name": f"CPU-{i+1}"} for i in range(20)]
+memories = [{"res_id": i, "type": "Memory", "size": 1, "name": f"Memory-{i+1}"} for i in range(20)]
+resources = gpus + cpus + memories
 
-# 자원 더미 데이터 (GPU 15개, CPU 15개)
-resources = []
-for i in range(15):
-    resources.append({"res_id": i, "type": "GPU"})
-for i in range(15):
-    resources.append({"res_id": i, "type": "CPU"})
+# -- 할당 대량 생성 (더미)
+def random_allocations():
+    allocs = []
+    base = datetime(2024, 7, 1)
+    for tlist, typename in [(gpus, "GPU"), (cpus, "CPU"), (memories, "Memory")]:
+        for res in tlist:
+            if random.random() < 0.8:  # 80% 할당
+                user = random.choice(users)
+                day = random.randint(0, 25)
+                duration = random.randint(3, 7)
+                allocs.append({
+                    "res_id": res["res_id"],
+                    "type": typename,
+                    "user": user,
+                    "start_date": (base + timedelta(days=day)).strftime('%Y-%m-%d'),
+                    "end_date": (base + timedelta(days=day+duration)).strftime('%Y-%m-%d')
+                })
+    return allocs
+allocations = random_allocations()
 
-# 할당(대여) 정보 (예시)
-allocations = [
-    # GPU 예시
-    {"res_id": 0, "type": "GPU", "user": "홍길동", "start_date": "2024-05-03", "end_date": "2024-05-10"},
-    {"res_id": 1, "type": "GPU", "user": "김철수", "start_date": "2024-07-01", "end_date": "2024-07-12"},
-    {"res_id": 2, "type": "GPU", "user": "이영희", "start_date": "2024-07-08", "end_date": "2024-07-18"},
-    {"res_id": 3, "type": "GPU", "user": "최수연", "start_date": "2024-07-15", "end_date": "2024-07-30"},
-    # CPU 예시
-    {"res_id": 0, "type": "CPU", "user": "박민수", "start_date": "2024-07-04", "end_date": "2024-07-11"},
-    {"res_id": 1, "type": "CPU", "user": "홍길동", "start_date": "2024-07-10", "end_date": "2024-07-20"},
-    {"res_id": 2, "type": "CPU", "user": "김철수", "start_date": "2024-06-21", "end_date": "2024-07-09"},
-    {"res_id": 3, "type": "CPU", "user": "최수연", "start_date": "2024-07-15", "end_date": "2024-07-25"},
-]
+@app.route("/api/report/sysinfo", methods=["GET"])
+def get_sysinfo():
+    gpu_models = sorted(set([r["model"] for r in gpus]))
+    cpu_models = sorted(set([r["model"] for r in cpus]))
+    return jsonify({
+        "user_count": len(users),
+        "gpu_count": len(gpus),
+        "cpu_count": len(cpus),
+        "memory_count": len(memories),
+        "gpu_models": gpu_models,
+        "cpu_models": cpu_models,
+        "memory_total_tb": len(memories),
+        "gpu_used": sum(1 for r in gpus if any(a for a in allocations if a["type"]=="GPU" and a["res_id"]==r["res_id"])),
+        "cpu_used": sum(1 for r in cpus if any(a for a in allocations if a["type"]=="CPU" and a["res_id"]==r["res_id"])),
+        "memory_used": sum(1 for r in memories if any(a for a in allocations if a["type"]=="Memory" and a["res_id"]==r["res_id"])),
+    })
 
-# 자원 종류별 정책 (할당 최대일, 사용자별 최대 자원 개수)
-resource_policy = {
-    "GPU": {"max_days": 30, "user_limit": 2},
-    "CPU": {"max_days": 30, "user_limit": 2}
-}
+@app.route("/api/report/total_usage", methods=["GET"])
+def total_usage():
+    dates = [(datetime(2024,7,1) + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(31)]
+    gpu = [0]*31
+    cpu = [0]*31
+    memory = [0]*31
+    for a in allocations:
+        s = datetime.strptime(a["start_date"], "%Y-%m-%d")
+        e = datetime.strptime(a["end_date"], "%Y-%m-%d")
+        for i, day in enumerate(dates):
+            day_dt = datetime.strptime(day, "%Y-%m-%d")
+            if s <= day_dt <= e:
+                if a["type"] == "GPU":
+                    gpu[i] += 1
+                elif a["type"] == "CPU":
+                    cpu[i] += 1
+                elif a["type"] == "Memory":
+                    memory[i] += 1
+    return jsonify({
+        "dates": dates,
+        "gpu": gpu,
+        "cpu": cpu,
+        "memory": memory
+    })
+
+@app.route("/api/report/individual_usage", methods=["GET"])
+def individual_usage():
+    rtype = request.args.get("type")
+    name = request.args.get("name")
+    dates = [(datetime(2024,7,1) + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(31)]
+    idx = int(name.split('-')[1]) - 1
+    if rtype == "GPU":
+        res = gpus[idx]
+    elif rtype == "CPU":
+        res = cpus[idx]
+    else:
+        res = memories[idx]
+    vals = []
+    for d in dates:
+        is_used = 0
+        for a in allocations:
+            if a["type"] == rtype and a["res_id"] == res["res_id"]:
+                s = datetime.strptime(a["start_date"], "%Y-%m-%d")
+                e = datetime.strptime(a["end_date"], "%Y-%m-%d")
+                cur = datetime.strptime(d, "%Y-%m-%d")
+                if s <= cur <= e:
+                    is_used = 1
+                    break
+        if rtype == "Memory":
+            vals.append(is_used*random.randint(60,96))
+        else:
+            vals.append(is_used*random.uniform(0.3, 1.5))
+    return jsonify({
+        "dates": dates,
+        "values": vals
+    })
+
+@app.route("/api/report/status", methods=["GET"])
+def get_status():
+    gpu_temps = [random.randint(30, 88) for _ in gpus]
+    cpu_temps = [random.randint(32, 72) for _ in cpus]
+    memory_usages = [random.randint(60, 96) for _ in memories]
+    return jsonify({
+        "gpu_temps": gpu_temps,
+        "cpu_temps": cpu_temps,
+        "memory_usages": memory_usages,
+        "gpu_names": [g["name"] for g in gpus],
+        "cpu_names": [c["name"] for c in cpus],
+        "memory_names": [m["name"] for m in memories]
+    })
+
+@app.route("/api/report/rank", methods=["GET"])
+def get_rank():
+    rank = []
+    for u in users:
+        gpu_days = 0
+        cpu_days = 0
+        memory_days = 0
+        for a in allocations:
+            if a["user"] == u:
+                s = datetime.strptime(a["start_date"], "%Y-%m-%d")
+                e = datetime.strptime(a["end_date"], "%Y-%m-%d")
+                days = (e-s).days + 1
+                if a["type"] == "GPU":
+                    gpu_days += days
+                elif a["type"] == "CPU":
+                    cpu_days += days
+                elif a["type"] == "Memory":
+                    memory_days += days
+        rank.append({"name": u, "gpu": gpu_days, "cpu": cpu_days, "memory": memory_days})
+    rank.sort(key=lambda x: (x["gpu"] + x["cpu"] + x["memory"]), reverse=True)
+    return jsonify(rank)
 
 @app.route("/api/resources", methods=["GET"])
 def get_resources():
-    # 전체 자원 + 할당상태 합쳐서 전달
     result = []
     for r in resources:
         alloc = next((a for a in allocations if a["res_id"] == r["res_id"] and a["type"] == r["type"]), None)
@@ -51,140 +160,9 @@ def get_resources():
         result.append(row)
     return jsonify(result)
 
-@app.route("/api/allocations", methods=["POST"])
-def allocate_resource():
-    data = request.json
-    # 기존 동일 자원이 이미 할당돼 있으면 skip (중복 할당 방지)
-    for a in allocations:
-        if a["res_id"] == data["res_id"] and a["type"] == data["type"]:
-            return jsonify({"result": "already_allocated"})
-    allocations.append({
-        "res_id": data["res_id"],
-        "type": data["type"],
-        "user": data["user"],
-        "start_date": data["start_date"],
-        "end_date": data["end_date"]
-    })
-    return jsonify({"result": "success"})
-
-@app.route("/api/allocations/reclaim", methods=["POST"])
-def reclaim_resource():
-    data = request.json
-    global allocations
-    allocations = [a for a in allocations if not (a["res_id"] == data["res_id"] and a["type"] == data["type"])]
-    return jsonify({"result": "success"})
-
-@app.route("/api/policy", methods=["GET", "POST"])
-def policy():
-    global resource_policy
-    if request.method == "POST":
-        data = request.json
-        for t in ["GPU", "CPU"]:
-            if t in data:
-                resource_policy[t].update({
-                    "max_days": int(data[t].get("max_days", resource_policy[t]["max_days"])),
-                    "user_limit": int(data[t].get("user_limit", resource_policy[t]["user_limit"]))
-                })
-    return jsonify(resource_policy)
-
 @app.route("/api/users", methods=["GET"])
 def get_users():
     return jsonify(users)
-
-@app.route("/api/reports/summary", methods=["GET"])
-def report_summary():
-    summary = {}
-    for t in ["GPU", "CPU"]:
-        total = len([r for r in resources if r["type"] == t])
-        used = len([a for a in allocations if a["type"] == t])
-        idle = total - used
-        summary[t] = {
-            "total": total,
-            "used": used,
-            "idle": idle,
-            "used_percent": round(used/total*100) if total else 0
-        }
-    return jsonify(summary)
-
-@app.route("/api/reports/heatmap", methods=["GET"])
-def report_heatmap():
-    # 2024년 7월 한달만 표시
-    days = [f"2024-07-{str(i).zfill(2)}" for i in range(1, 32)]
-    heatmap = {}
-    for t in ["GPU", "CPU"]:
-        type_res = [r for r in resources if r["type"] == t]
-        data = []
-        for r in type_res:
-            row = []
-            a = next((a for a in allocations if a["res_id"] == r["res_id"] and a["type"] == t), None)
-            for d in days:
-                if a:
-                    s = datetime.strptime(a["start_date"], "%Y-%m-%d")
-                    e = datetime.strptime(a["end_date"], "%Y-%m-%d")
-                    cur = datetime.strptime(d, "%Y-%m-%d")
-                    row.append(1 if s <= cur <= e else 0)
-                else:
-                    row.append(0)
-            data.append({"res_id": r["res_id"], "usage": row})
-        heatmap[t] = data
-    return jsonify({
-        "days": days,
-        "heatmap": heatmap
-    })
-
-@app.route("/api/reports/usage", methods=["GET"])
-def report_usage():
-    """
-    type=GPU/CPU 쿼리 파라미터 지원. 
-    1. 전체 자원(15개) 기준
-    2. 2024년 7월(1일~31일) 각 날짜별로, 사용중인 자원 개수
-    3. 사용자별, 7월 한달 누적 사용일수
-    4. 전체 누적 사용일
-    """
-    rtype = request.args.get('type', 'GPU')
-    dates = [f"2024-07-{str(i).zfill(2)}" for i in range(1, 32)]
-    users_in_use = [a["user"] for a in allocations if a["type"] == rtype]
-    users_in_use = list(sorted(set(users_in_use)))
-    user_usage = {u: 0 for u in users_in_use}
-    daily_usage = {d: 0 for d in dates}
-    for a in allocations:
-        if a["type"] != rtype: continue
-        s = datetime.strptime(a["start_date"], "%Y-%m-%d")
-        e = datetime.strptime(a["end_date"], "%Y-%m-%d")
-        for d in dates:
-            day_dt = datetime.strptime(d, "%Y-%m-%d")
-            if s <= day_dt <= e:
-                daily_usage[d] += 1
-                user_usage[a["user"]] += 1
-    return jsonify({
-        "dates": dates,
-        "daily_usage": [daily_usage[d] for d in dates],
-        "users": users_in_use,
-        "user_usage": [user_usage[u] for u in users_in_use],
-        "total_usage": sum(user_usage.values())
-    })
-
-@app.route("/api/reports/idle", methods=["GET"])
-def report_idle():
-    """
-    type=GPU/CPU 쿼리 파라미터 지원.
-    각 자원별, 현재 기준 유휴 일수 계산
-    """
-    rtype = request.args.get('type', 'GPU')
-    now = datetime.now()
-    idle_list = []
-    type_res = [r for r in resources if r["type"] == rtype]
-    for r in type_res:
-        alloc = next((a for a in allocations if a["res_id"] == r["res_id"] and a["type"] == rtype), None)
-        if alloc:
-            end_dt = datetime.strptime(alloc["end_date"], "%Y-%m-%d")
-            idle = (now - end_dt).days if end_dt < now else 0
-            user = alloc["user"]
-        else:
-            idle = 9999
-            user = None
-        idle_list.append({"res_id": r["res_id"], "user": user, "idle_days": idle})
-    return jsonify(idle_list)
 
 if __name__ == "__main__":
     app.run(debug=True)
