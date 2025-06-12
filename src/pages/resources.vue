@@ -5,12 +5,15 @@
         <v-btn @click="assignDialog = true" color="primary" class="mb-3">
           <v-icon left>mdi-plus</v-icon> 자원 할당
         </v-btn>
-        <v-btn @click="showReport = true" color="info" class="mb-3 ml-3">
-          <v-icon left>mdi-chart-bar</v-icon> 자원 현황/보고서 보기
-        </v-btn>
+        <router-link to="/reports">
+          <v-btn color="info" class="mb-3 ml-3">
+            <v-icon left>mdi-chart-bar</v-icon> 자원 현황/보고서 보기
+          </v-btn>
+        </router-link>
+
         <v-select
           v-model="resourceTypeFilter"
-          :items="['ALL', 'GPU', 'CPU']"
+          :items="['ALL', 'GPU', 'CPU', 'Memory']"
           label="자원 종류 필터"
           dense
           class="mb-3"
@@ -77,11 +80,10 @@
           />
           <v-select
             label="자원 종류"
-            :items="['GPU','CPU']"
+            :items="['GPU','CPU','Memory']"
             v-model="assignResourceType"
             dense
           />
-          <!-- 문제의 부분: 꼭 아래처럼! -->
           <v-select
             label="자원 선택(복수)"
             v-model="selectedResourceKeys"
@@ -92,7 +94,6 @@
             :rules="[v => v && v.length > 0 || '최소 1개 선택']"
             dense
           />
-
           <v-menu
             v-model="menu1"
             :close-on-content-click="false"
@@ -142,21 +143,18 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-    <!-- 보고서 모달 -->
-    <ReportDialog v-model="showReport"/>
   </v-container>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
 import axios from 'axios'
-import ReportDialog from '@/components/ReportDialog.vue'
 
 // 데이터 상태
 const users = ref([])
 const resources = ref([])
 
-// 자원종류(GPU/CPU/ALL) 필터
+// 자원종류(GPU/CPU/Memory/ALL) 필터
 const resourceTypeFilter = ref('ALL')
 
 // 사용자별 자원 필터
@@ -180,7 +178,7 @@ const endStr = ref('')
 const menu1 = ref(false)
 const menu2 = ref(false)
 
-// 할당 안된 자원만 리스트 (label만 나오게!!)
+// 할당 안된 자원만 리스트
 const availableResources = computed(() =>
   resources.value
     .filter(r => !r.user)
@@ -191,7 +189,6 @@ const availableResources = computed(() =>
       type: r.type
     }))
 )
-// 필터된 할당 가능 자원 (팝업)
 const filteredAvailableResources = computed(() =>
   availableResources.value.filter(r => r.type === assignResourceType.value)
 )
@@ -252,7 +249,4 @@ async function reclaimResource(r) {
   })
   await fetchData()
 }
-
-// 보고서 모달
-const showReport = ref(false)
 </script>
