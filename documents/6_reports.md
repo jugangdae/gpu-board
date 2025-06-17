@@ -18,7 +18,7 @@ src
 
 
 
-## 6.2 SystemInfoCards.vue
+## 6.2.1 SystemInfoCards.vue
 
 ![SystemInfoCards](asset/reports/reports1.png)
 
@@ -30,6 +30,16 @@ src
 
 ```
 ```
+
+## 6.2.2 SystemInfoCards.vue 연동 확인
+
+![SystemInfoCards](asset/reports/reports5.png)
+
+- 시스템 전체 현황 요약 카드, 하단의 메모리 그래프와 `sysinfo` 카드의 현황 연동
+
+```
+```
+
 
 ## 6.3 TotalUsageCharts.vue
 
