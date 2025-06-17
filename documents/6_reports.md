@@ -20,7 +20,7 @@ src
 
 ## 6.2.1 SystemInfoCards.vue
 
-![SystemInfoCards](asset/reports/reports1.png)
+![SystemInfoCards](asset/reports/reports1.1.png)
 
 - 시스템 전체 현황 요약 카드 (총 유저 수, 자원 수량, 사용량)
 - 카드 별 색상: 유저(보라), GPU(파랑), CPU(시안), 메모리(초록)
