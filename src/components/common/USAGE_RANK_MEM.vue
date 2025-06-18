@@ -6,7 +6,7 @@
         <tr>
           <th>순위</th>
           <th>사용자</th>
-          <th>MEM(%)</th>
+          <th>사용량(%)</th>
         </tr>
       </thead>
       <tbody>

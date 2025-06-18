@@ -5,14 +5,8 @@
       <v-col cols="12">
         <v-card class="pa-4" style="border:1.5px solid #e0e0e0;">
           <div class="text-h5 mb-2">GPU 자원 검색</div>
-          <v-text-field
-            v-model="searchKeyword"
-            placeholder="GPU 번호 입력 (예: 0, 12)"
-            dense
-            hide-details
-            prepend-inner-icon="mdi-magnify"
-            style="max-width: 320px;"
-          />
+          <v-text-field v-model="searchKeyword" placeholder="GPU 번호 입력 (예: 0, 12)" dense hide-details
+            prepend-inner-icon="mdi-magnify" style="max-width: 320px;" />
         </v-card>
       </v-col>
     </v-row>
@@ -83,7 +77,8 @@
       <v-card>
         <v-card-title>자원 할당</v-card-title>
         <v-card-text>
-          <v-select label="사용자" :items="userNamesList" v-model="assignUser" :rules="[v => !!v || '필수 입력']" dense clearable />
+          <v-select label="사용자" :items="userNamesList" v-model="assignUser" :rules="[v => !!v || '필수 입력']" dense
+            clearable />
           <v-select label="자원 종류" :items="['GPU', 'CPU', 'Memory']" v-model="assignResourceType" dense />
           <v-select label="자원 선택(복수)" v-model="selectedResourceKeys" :items="filteredAvailableResources"
             item-title="label" item-value="key" multiple :rules="[v => v && v.length > 0 || '최소 1개 선택']" dense />
