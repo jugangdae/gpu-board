@@ -15,7 +15,6 @@ src
 │       ├── SINGLE_CHART_MEM.vue
 │       ├── SIMPLE_CPU_COUNT.vue
 │       ├── SIMPLE_GPU_COUNT.vue
-│       ├── TotalUsageCharts.vue
 │       ├── SIMPLE_TOTAL_MEM.vue
 │       ├── TSIMPLE_TOTAL_USER.vue
 │       ├── USAGE_RANK_CPU.vue
