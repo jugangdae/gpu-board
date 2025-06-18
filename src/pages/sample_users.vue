@@ -9,7 +9,7 @@ import USER_TABLE from '@/components/common/USER_TABLE.vue';
       <v-col>
         <v-card-text class="py-4">
           <span style="font-size: 200%;">
-            README: 사용자 관련
+            README: 사용자 관리 페이지 구현 참고용
           </span>
         </v-card-text>
       </v-col>

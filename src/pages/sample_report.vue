@@ -33,8 +33,7 @@
       <v-col>
         <v-card-text class="py-4">
           <span style="font-size: 200%;">
-            README: 이 페이지에 있는 컴포넌트 구현 참고해서 각자 알맞은 리포트 화면 구현하면 됩니다.
-            컴포넌트는 src/components/common에 있고, 백엔드는 common_api.py 입니다.
+            README: 리포트 페이지 구현 참고용
           </span>
         </v-card-text>
       </v-col>
