@@ -68,7 +68,15 @@
     <v-row>
       <v-col>
         <!-- selectedStartDate의 값을 직접 YYYYMMDD로 변환하여 전달 -->
-        <SINGLE_CHART_JS :startDate="selectedStartDate ? selectedStartDate.replace(/-/g, '') : ''"
+        <MULTI_CHART_GPU :startDate="selectedStartDate ? selectedStartDate.replace(/-/g, '') : ''"
+          :endDate="selectedEndDate ? selectedEndDate.replace(/-/g, '') : ''" />
+      </v-col>
+    </v-row>
+
+    <v-row>
+      <v-col>
+        <!-- selectedStartDate의 값을 직접 YYYYMMDD로 변환하여 전달 -->
+        <MULTI_CHART_TEMP :startDate="selectedStartDate ? selectedStartDate.replace(/-/g, '') : ''"
           :endDate="selectedEndDate ? selectedEndDate.replace(/-/g, '') : ''" />
       </v-col>
     </v-row>
@@ -96,7 +104,9 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import MULTI_CHART_JS from '@/components/common/MULTI_CHART_JS.vue'; // 실제 경로에 맞게 수정
+import MULTI_CHART_JS from '@/components/common/MULTI_CHART_JS.vue';
+import MULTI_CHART_GPU from '@/components/common/MULTI_CHART_GPU.vue'; // 실제 경로에 맞게 수정
+import MULTI_CHART_TEMP from '@/components/common/MULTI_CHART_TEMP.vue';
 import SINGLE_CHART_JS from '@/components/common/SINGLE_CHART_JS.vue';
 // import SIMPLE_UPDATE_1 from '@/components/common/SIMPLE_UPDATE_1.vue';
 import SIMPLE_CPU_COUNT from '@/components/common/SIMPLE_CPU_COUNT.vue';
