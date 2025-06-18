@@ -17,24 +17,29 @@ src
 
 ## 5.2 사용자 검색 카드
 
-![사용자 검색](asset/resources/resources2.png)
+![자웜 검색](asset/resources/resourcesnew.png)
 
 - 상단 영역에 위치
-- 이름 또는 ID를 포함하는 문자열로 실시간 검색 가능
+- 자원번호로 실시간 검색 가능
 - `v-text-field` 사용, `searchKeyword`로 v-model 바인딩
-- `computed`로 필터링된 사용자 목록을 실시간 렌더링
+- `computed`로 필터링된 자원 목록을 실시간 렌더링
 
 ```
 ```
 
 ## 5.3 사용자별 자원 카드
 
-![할당된 자원 카드](asset/resources/resources3.png)
+![할당된 자원 카드](asset/resources/resourcesnew3.png)
 
-- 각 사용자는 하나의 카드에 표시됨
-- 각 자원 종류(GPU, CPU, Memory) 별로 테이블 출력
-- 열 구성: 자원 종류, 번호, 기간(시작~종료), 회수 버튼
+- 각 사용자 카드에 표시됨
+- 각 자원 출력
+- 열 구성: 자원 , 번호, 기간(시작~종료), 회수 버튼
 - `resources.value` 배열에서 사용자의 자원만 필터링
+
+
+![할당된 자원이 없을 시](asset/resources/resourcesnew2.png)
+
+- -표시로 자원이 할당되지 않았음을 명확하게 표시
 
 ```
 ```
