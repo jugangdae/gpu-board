@@ -1,38 +1,7 @@
-# Prepare(Mac OS 기준)
 
-## nvm 설치
-```
-brew install nvm
-```
-## node 설치
-```
- nvm install --lts
-```
-확인 : `nvm version` -> v22.16.0
-## yarn 설치
-```
-npm install -g yarn
-```
+# README
 
-# Setup
-
-## Clone repo
-
-```
-git clone https://github.com/jugangdae/gpu-board
-```
-
-## Install pacakges
-```
-cd gpu-board
-npm i
-```
-
-## Test
-
-```
-yarn dev
-```
+설치 및 개발 관련 내용은 `documents` 참고
 
 # TODO
 
@@ -60,18 +29,3 @@ yarn dev
 - 보고서: 
     - 자원 사용량 보고서: 총 사용량, 특정 사용자별 사용량 및 시간별 사용량과 같은 자원 사용 패턴에 대한 보고서를 생성
     - 유휴 시간 보고서: 자원이 유휴 상태였던 시간에 대한 보고서를 제공하여 잠재적인 비효율성을 식별
-
-# Note
-1. `src/pages`에 각 페이지에 해당하는 기능 개발
-2. `src/components`에 필요한 부품 만들어서 재사용 가능
-
----
-```
-yarn create vuetify
-
-✔ Project name: gpu-board
-✔ Which preset would you like to install?: Default (Adds routing, ESLint & SASS variables)
-✔ Use TypeScript?: No
-✔ Would you like to install dependencies with yarn, npm, pnpm, or bun?: yarn
-✔ Install Dependencies?: Yes
-```
