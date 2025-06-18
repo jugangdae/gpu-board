@@ -1,13 +1,18 @@
 <template>
   <v-container>
-
-    <!-- 사용자 검색 -->
+    <!-- 자원 검색 (GPU 번호) -->
     <v-row class="mb-6">
       <v-col cols="12">
         <v-card class="pa-4" style="border:1.5px solid #e0e0e0;">
-          <div class="text-h5 mb-2">자원 검색</div>
-          <v-text-field v-model="searchKeyword" placeholder="이름 또는 ID 검색" dense hide-details
-            prepend-inner-icon="mdi-magnify" style="max-width: 320px;" />
+          <div class="text-h5 mb-2">GPU 자원 검색</div>
+          <v-text-field
+            v-model="searchKeyword"
+            placeholder="GPU 번호 입력 (예: 0, 12)"
+            dense
+            hide-details
+            prepend-inner-icon="mdi-magnify"
+            style="max-width: 320px;"
+          />
         </v-card>
       </v-col>
     </v-row>
@@ -22,52 +27,58 @@
             <v-icon left>mdi-chart-bar</v-icon> 자원 현황/보고서 보기
           </v-btn>
         </router-link>
-        <v-select v-model="resourceTypeFilter" :items="['ALL', 'GPU', 'CPU', 'Memory']" label="자원 종류 필터" dense
-          class="mb-3" style="max-width: 160px;" />
       </v-col>
     </v-row>
 
-    <!-- 사용자별 자원 테이블 -->
+    <!-- GPU 자원 테이블 (검색 결과만) -->
     <v-row>
-      <v-col cols="12" md="6"
-        v-for="userObj in filteredUsers"
-        :key="getUserName(userObj)">
+      <v-col cols="12">
         <v-card class="mb-4">
           <v-card-title>
-            <span>{{ getUserName(userObj) }} - 할당 자원</span>
+            <span>GPU 자원 목록</span>
           </v-card-title>
           <v-card-text>
-            <div v-if="userResources(getUserName(userObj)).length">
+            <div v-if="filteredGPUs.length">
               <v-table>
                 <thead>
                   <tr>
-                    <th>종류</th>
-                    <th>번호</th>
+                    <th>GPU 번호</th>
+                    <th>모델</th>
+                    <th>사용자</th>
                     <th>기간</th>
                     <th>조치</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="r in userResources(getUserName(userObj))" :key="r.type + '_' + r.res_id">
-                    <td>{{ r.type }}</td>
-                    <td>{{ r.res_id }}</td>
-                    <td>{{ r.start_date }} ~ {{ r.end_date }}</td>
+                  <tr v-for="gpu in filteredGPUs" :key="gpu.res_id">
+                    <td>{{ gpu.res_id }}</td>
+                    <td>{{ gpu.model }}</td>
+                    <td>{{ gpu.user || '-' }}</td>
                     <td>
-                      <v-btn size="small" color="error" @click="reclaimResource(r)">회수</v-btn>
+                      <template v-if="gpu.start_date && gpu.end_date">
+                        {{ gpu.start_date }} ~ {{ gpu.end_date }}
+                      </template>
+                      <template v-else>
+                        -
+                      </template>
+                    </td>
+                    <td>
+                      <v-btn v-if="gpu.user" size="small" color="error" @click="reclaimResource(gpu)">회수</v-btn>
+                      <span v-else class="text-grey">-</span>
                     </td>
                   </tr>
                 </tbody>
               </v-table>
             </div>
             <div v-else class="text-grey text-caption mt-2">
-              할당된 자원이 없습니다.
+              해당 GPU 번호의 자원이 없습니다.
             </div>
           </v-card-text>
         </v-card>
       </v-col>
     </v-row>
 
-    <!-- 자원 할당 다이얼로그 (여러 개 동시) -->
+    <!-- 자원 할당 다이얼로그 (원래와 동일) -->
     <v-dialog v-model="assignDialog" max-width="520">
       <v-card>
         <v-card-title>자원 할당</v-card-title>
@@ -102,7 +113,6 @@
 import { ref, computed } from 'vue'
 import axios from 'axios'
 
-// 날짜 선택 State
 const today = new Date()
 const thisYear = today.getFullYear()
 const selectedStartDate = ref(`${thisYear}-01-01`)
@@ -122,60 +132,37 @@ function formatDateToString(date) {
   return ''
 }
 
-// 사용자 데이터 상태 (string or object 모두 대응)
+// 사용자/자원 데이터
 const users = ref([])
 const resources = ref([])
 
-// user 객체이든 string이든 이름만 반환
-function getUserName(user) {
-  if (!user) return ''
-  if (typeof user === 'string') return user
-  if (typeof user === 'object' && user.name) return user.name
-  // 혹시 name 필드가 없으면 string 변환
-  return String(user)
-}
-
-// 🔍 사용자 검색 (이름 또는 ID)
 const searchKeyword = ref('')
-const filteredUsers = computed(() => {
-  if (!searchKeyword.value) return users.value
-  return users.value.filter(u => {
-    const name = getUserName(u)
-    return name.toLowerCase().includes(searchKeyword.value.toLowerCase())
-  })
-})
-// 모든 유저 이름만 추출 (자원 할당 다이얼로그 등에서 사용)
-const userNamesList = computed(() => users.value.map(getUserName))
 
-// 자원종류(GPU/CPU/Memory/ALL) 필터
-const resourceTypeFilter = ref('ALL')
+// GPU만 추출
+const gpuResources = computed(() =>
+  resources.value.filter(r => r.type === 'GPU')
+)
 
-// 날짜 범위 내 자원만 필터링
-function isInSelectedPeriod(res) {
-  if (!res.start_date || !res.end_date) return false
-  const start = selectedStartDate.value.replace(/-/g, '')
-  const end = selectedEndDate.value.replace(/-/g, '')
-  const res_start = res.start_date.replace(/-/g, '')
-  const res_end = res.end_date.replace(/-/g, '')
-  // 겹치면 true
-  return !(res_end < start || res_start > end)
-}
-
-// 사용자별 자원 필터 (userName만 비교)
-function userResources(userName) {
-  let list = resources.value.filter(r => r.user === userName)
-  if (resourceTypeFilter.value !== 'ALL') {
-    list = list.filter(r => r.type === resourceTypeFilter.value)
+// GPU 번호 검색
+const filteredGPUs = computed(() => {
+  if (!searchKeyword.value) return gpuResources.value.slice(0, 6)
+  const kw = searchKeyword.value.trim()
+  // 숫자만 입력된 경우 해당 GPU 번호만
+  if (/^\d+$/.test(kw)) {
+    return gpuResources.value.filter(gpu => String(gpu.res_id) === kw).slice(0, 6)
   }
-  // 날짜 범위 내 할당만 필터링
-  list = list.filter(isInSelectedPeriod)
-  return list
-}
+  // 일부 텍스트가 들어가면 모델명으로도 검색 가능
+  return gpuResources.value.filter(gpu =>
+    gpu.model.toLowerCase().includes(kw.toLowerCase())
+  ).slice(0, 6)
+})
 
-// --- 다중 자원 할당 팝업 ---
+// 할당 관련 데이터 (아래는 원본 유지)
+const userNamesList = computed(() => users.value.map(u => typeof u === 'string' ? u : (u.name || String(u))))
+const resourceTypeFilter = ref('ALL')
 const assignDialog = ref(false)
 const assignUser = ref('')
-const assignResourceType = ref('GPU') // 기본값 GPU
+const assignResourceType = ref('GPU')
 const selectedResourceKeys = ref([])
 const startObj = ref(null)
 const endObj = ref(null)
@@ -183,8 +170,6 @@ const startStr = ref('')
 const endStr = ref('')
 const menu1 = ref(false)
 const menu2 = ref(false)
-
-// 할당 안된 자원만 리스트
 const availableResources = computed(() =>
   resources.value
     .filter(r => !r.user)
@@ -198,8 +183,6 @@ const availableResources = computed(() =>
 const filteredAvailableResources = computed(() =>
   availableResources.value.filter(r => r.type === assignResourceType.value)
 )
-
-// 날짜 선택 (자원 할당 팝업)
 function onPickStart(v) {
   startObj.value = v
   startStr.value = v ? formatDateToString(v) : ''
@@ -240,14 +223,12 @@ async function confirmAssign() {
   closeAssignDialog()
 }
 
-// 자원목록+유저 불러오기
 async function fetchData() {
   resources.value = (await axios.get('http://localhost:8000/api/resources')).data
   users.value = (await axios.get('http://localhost:8000/api/users')).data
 }
 fetchData()
 
-// 회수
 async function reclaimResource(r) {
   await axios.post('http://localhost:8000/api/allocations/reclaim', {
     res_id: r.res_id,
