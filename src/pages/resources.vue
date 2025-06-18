@@ -1,46 +1,11 @@
 <template>
   <v-container>
-    <!-- 날짜 선택 영역 -->
-    <v-row>
-      <v-col cols="12" md="6">
-        <v-menu v-model="startDateMenu" :close-on-content-click="false" transition="scale-transition" offset-y min-width="auto">
-          <template #activator="{ props }">
-            <v-text-field
-              v-model="selectedStartDate"
-              label="시작 날짜"
-              prepend-icon="mdi-calendar"
-              readonly
-              v-bind="props"
-              dense
-              hide-details
-            />
-          </template>
-          <v-date-picker v-model="selectedStartDate" type="string" @update:modelValue="val => { startDateMenu = false; selectedStartDate = formatDateToString(val); }" />
-        </v-menu>
-      </v-col>
-      <v-col cols="12" md="6">
-        <v-menu v-model="endDateMenu" :close-on-content-click="false" transition="scale-transition" offset-y min-width="auto">
-          <template #activator="{ props }">
-            <v-text-field
-              v-model="selectedEndDate"
-              label="종료 날짜"
-              prepend-icon="mdi-calendar"
-              readonly
-              v-bind="props"
-              dense
-              hide-details
-            />
-          </template>
-          <v-date-picker v-model="selectedEndDate" type="string" @update:modelValue="val => { endDateMenu = false; selectedEndDate = formatDateToString(val); }" />
-        </v-menu>
-      </v-col>
-    </v-row>
 
     <!-- 사용자 검색 -->
     <v-row class="mb-6">
       <v-col cols="12">
         <v-card class="pa-4" style="border:1.5px solid #e0e0e0;">
-          <div class="text-h5 mb-2">사용자 검색</div>
+          <div class="text-h5 mb-2">자원 검색</div>
           <v-text-field v-model="searchKeyword" placeholder="이름 또는 ID 검색" dense hide-details
             prepend-inner-icon="mdi-magnify" style="max-width: 320px;" />
         </v-card>
