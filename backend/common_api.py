@@ -415,6 +415,21 @@ def generate_dummy_users(num_users=20):
 
 generate_dummy_users(20) # 서버 시작 시 더미 사용자 생성
 
+GPUS = [
+    {"id": "1", "name": "NVIDIA GeForce RTX 4090"},
+    {"id": "2", "name": "NVIDIA GeForce RTX 4080"},
+    {"id": "3", "name": "NVIDIA GeForce RTX 3090"},
+    {"id": "4", "name": "AMD Radeon RX 7900 XTX"},
+    {"id": "5", "name": "NVIDIA A100 Tensor Core GPU"},
+    {"id": "6", "name": "NVIDIA A100 Tensor Core GPU"},
+]
+
+
+# --- 모든 GPU 목록 조회 API ---
+@app.route('/api/sample/gpus', methods=['GET'])
+def get_all_gpus():
+    return jsonify(GPUS), 200
+
 # ----------------------------------------------------------------------
 
 
